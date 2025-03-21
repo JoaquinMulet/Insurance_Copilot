@@ -1,27 +1,44 @@
 // middleware.js
-import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-// Define public routes that don't require authentication
-const publicPaths = [
-  '/',                // Home page (with limited functionality)
-  '/signin',          // Sign-in route
-  '/signup',          // Sign-up route
-  '/api/webhook/clerk' // Clerk webhooks
-];
+// Lista de rutas públicas
+const publicRoutes = ['/', '/signin', '/signup', '/api/webhook/clerk'];
 
-export default clerkMiddleware((auth, req) => {
-  // Clerk maneja automáticamente la autenticación
-  // Solo necesitamos identificar las rutas públicas
+export default function middleware(request) {
+  const { pathname } = request.nextUrl;
+  
+  // Permitir acceso a rutas públicas y recursos estáticos
+  if (
+    publicRoutes.some(route => pathname.startsWith(route)) ||
+    pathname.includes('/_next/') ||
+    pathname.includes('/favicon.ico')
+  ) {
+    return NextResponse.next();
+  }
+  
+  // Verificar autenticación usando cookies
+  // En lugar de usar funciones de Clerk, verificamos si existe una cookie de sesión
+  const hasClerkSession = request.cookies.get('__clerk_session') !== undefined;
+  
+  if (!hasClerkSession) {
+    // Redirigir a página de login
+    const redirectUrl = new URL('/signin', request.url);
+    redirectUrl.searchParams.set('redirect_url', pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+  
   return NextResponse.next();
-});
+}
 
-// Configure matcher for all routes, especially API routes
 export const config = {
   matcher: [
-    // Include all routes except static files, images, and favicon
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-    // Explicitly include all API routes
-    "/api/(.*)"
+    /*
+     * Match all paths except for:
+     * 1. /api routes
+     * 2. /_next (Next.js internals)
+     * 3. /fonts (inside /public)
+     * 4. all root files inside /public (e.g. /favicon.ico)
+     */
+    '/((?!api|_next|fonts|images|[\\w-]+\\.\\w+).*)',
   ],
 };
