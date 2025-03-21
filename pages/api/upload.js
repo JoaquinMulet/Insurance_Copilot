@@ -4,12 +4,8 @@ import fs from 'fs';
 import { processSingleDocument } from '../../lib/summaryGenerator';
 import { compareMultipleDocuments } from '../../lib/comparisonGenerator';
 import { getAuth } from '@clerk/nextjs/server';
-
-// Import the auth wrapper
 import { withAuthAndAuthorizationFormData } from '../../lib/withAuth';
 
-
-// Disable bodyParser to handle files manually
 export const config = {
   api: {
     bodyParser: false,
@@ -43,13 +39,22 @@ async function handler(req, res) {
       keepExtensions: true,
     });
 
-    // Process form
-    const [fields, files] = await new Promise((resolve, reject) => {
-      form.parse(req, (err, fields, files) => {
-        if (err) return reject(err);
-        resolve([fields, files]);
+    // Process form with proper error handling
+    let fields, files;
+    try {
+      [fields, files] = await new Promise((resolve, reject) => {
+        form.parse(req, (err, fields, files) => {
+          if (err) return reject(err);
+          resolve([fields, files]);
+        });
       });
-    });
+    } catch (error) {
+      console.error('Error parsing form:', error);
+      return res.status(400).json({
+        error: 'Error al procesar el formulario',
+        details: error.message
+      });
+    }
 
     // Check if it's single analysis or comparison
     const mode = fields.mode ? fields.mode[0] : 'single';
@@ -77,7 +82,12 @@ async function handler(req, res) {
         const result = await processSingleDocument(primaryFile);
         
         // Delete temporary file
-        fs.unlinkSync(primaryFile.filepath);
+        try {
+          fs.unlinkSync(primaryFile.filepath);
+        } catch (unlinkError) {
+          console.error('Error deleting temporary file:', unlinkError);
+          // Continue execution, this is not critical
+        }
         
         // Return final summary to client
         return res.status(200).json({ text: result.finalSummary });
@@ -135,6 +145,7 @@ async function handler(req, res) {
             fs.unlinkSync(file.filepath);
           } catch (error) {
             console.error(`Error deleting temporary file ${file.originalFilename}:`, error);
+            // Continue execution, this is not critical
           }
         });
         
