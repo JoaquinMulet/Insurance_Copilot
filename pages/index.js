@@ -176,64 +176,68 @@ export default function Home() {
   };
   
   // Descargar documento en formato DOCX
-  const handleDownloadDocx = async () => {
-    try {
-      setIsGeneratingDocx(true);
-      
-      if (Array.isArray(response) && response.length > 0 && response[0].text) {
-        markdownContent = response[0].text;
-      } else if (response && response.text) {
-        markdownContent = response.text;
-      } else if (response && typeof response === 'object') {
-        // Intentamos convertir el objeto a texto markdown
-        try {
-          markdownContent = `# Resultado del análisis\n\n`;
-          Object.entries(response).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              markdownContent += `## ${key}\n\n${value}\n\n`;
-            } else if (value !== null && typeof value === 'object') {
-              markdownContent += `## ${key}\n\n${JSON.stringify(value, null, 2)}\n\n`;
-            }
-          });
-        } catch (e) {
-          console.error('Error al convertir respuesta a markdown:', e);
-          throw new Error('No se pudo convertir la respuesta a un formato descargable');
-        }
-      } else {
-        throw new Error('No se encontró contenido para descargar');
-      }
-      
-      // Llamar a la API para generar el documento DOCX
-      const res = await fetch('/api/generate-docx', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ markdownContent }),
-      });
-      
-      // Manejo de respuestas no autorizadas (401)
-      if (res.status === 401) {
-        toast({
-          title: "Sesión caducada",
-          description: "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
-          variant: "destructive",
+  // Fixed handleDownloadDocx function
+const handleDownloadDocx = async () => {
+  try {
+    setIsGeneratingDocx(true);
+    
+    // Declare the markdownContent variable
+    let markdownContent = '';
+    
+    if (Array.isArray(response) && response.length > 0 && response[0].text) {
+      markdownContent = response[0].text;
+    } else if (response && response.text) {
+      markdownContent = response.text;
+    } else if (response && typeof response === 'object') {
+      // Intentamos convertir el objeto a texto markdown
+      try {
+        markdownContent = `# Resultado del análisis\n\n`;
+        Object.entries(response).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            markdownContent += `## ${key}\n\n${value}\n\n`;
+          } else if (value !== null && typeof value === 'object') {
+            markdownContent += `## ${key}\n\n${JSON.stringify(value, null, 2)}\n\n`;
+          }
         });
-        // Redirigir al inicio de sesión
-        router.push('/signin');
-        return;
+      } catch (e) {
+        console.error('Error al convertir respuesta a markdown:', e);
+        throw new Error('No se pudo convertir la respuesta a un formato descargable');
       }
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Error al generar el documento DOCX');
-      }
-      
-      // Obtener el blob del documento
-      const blob = await res.blob();
-      
-      // Crear un enlace temporal para descargar el archivo
-      const url = window.URL.createObjectURL(blob);
+    } else {
+      throw new Error('No se encontró contenido para descargar');
+    }
+    
+    // Llamar a la API para generar el documento DOCX
+    const res = await fetch('/api/generate-docx', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ markdownContent }),
+    });
+    
+    // Manejo de respuestas no autorizadas (401)
+    if (res.status === 401) {
+      toast({
+        title: "Sesión caducada",
+        description: "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
+        variant: "destructive",
+      });
+      // Redirigir al inicio de sesión
+      router.push('/signin');
+      return;
+    }
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || 'Error al generar el documento DOCX');
+    }
+    
+    // Obtener el blob del documento
+    const blob = await res.blob();
+    
+    // Crear un enlace temporal para descargar el archivo
+    const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       
