@@ -6,6 +6,14 @@ import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { getAuth } from '@clerk/nextjs/server';
 import { withAuthAndAuthorizationFormData } from '../../lib/withAuth';
+import formidable from 'formidable';
+
+// Disable the default body parser to handle FormData
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 async function generateDocxHandler(req, res) {
   try {
@@ -13,7 +21,17 @@ async function generateDocxHandler(req, res) {
       return res.status(405).json({ error: 'Método no permitido' });
     }
 
-    const { markdownContent } = req.body;
+    // Parse form data manually using formidable
+    const form = new formidable.IncomingForm();
+    const formData = await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) return reject(err);
+        resolve({ fields, files });
+      });
+    });
+
+    // Get markdownContent from the parsed fields
+    const markdownContent = formData.fields.markdownContent;
 
     if (!markdownContent) {
       return res.status(400).json({ error: 'No se proporcionó contenido markdown' });
