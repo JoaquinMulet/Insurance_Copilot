@@ -179,5 +179,4 @@ async function generateDocxHandler(req, res) {
 }
 
 // Export the handler with the correct middleware
-// Note: Since we're receiving JSON data, not FormData, we should use the standard withAuthAndAuthorization instead
 export default withAuthAndAuthorizationFormData(generateDocxHandler);
