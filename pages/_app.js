@@ -1,3 +1,4 @@
+// pages/_app.js
 import '../styles/global.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from '../components/ui/toaster.jsx';

@@ -1,5 +1,5 @@
 // middleware.js
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { authMiddleware } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
 
 // Define public routes that don't require authentication
@@ -10,10 +10,12 @@ const publicPaths = [
   '/api/webhook/clerk' // Clerk webhooks
 ];
 
-export default clerkMiddleware((auth, req) => {
-  // Clerk maneja automáticamente la autenticación
-  // Solo necesitamos identificar las rutas públicas
-  return NextResponse.next();
+export default authMiddleware({
+  // Return true if the path should be accessible without authentication
+  publicRoutes: (req) => {
+    const path = req.nextUrl.pathname;
+    return publicPaths.includes(path);
+  },
 });
 
 // Configure matcher for all routes, especially API routes
